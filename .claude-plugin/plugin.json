@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "judge-codex",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Autonomous + rigorous Codex-as-judge layer for the `plan` cycle ecosystem (DISCOVER → PLAN → IMPLEMENT → CODE-QUALITY → REVIEW). Breaks the Claude-only monoculture by adding GPT-Codex as an orthogonal LLM jury that re-validates each cycle's artifact against the cycle's golden-rule contract. Output is structured JSON aligned with the canonical verdict vocabulary (SHIPPABLE / SHIPPABLE_WITH_CAVEATS / NEEDS_FIXES / FAIL_HARD / INVALID) — not the binary approve/needs-attention used by generic code review.",
   "author": {
     "name": "Paulo Henrique",

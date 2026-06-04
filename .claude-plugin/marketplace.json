@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "judge-codex",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Codex-as-judge marketplace — adds GPT-Codex as an orthogonal LLM jury for the `plan` cycle ecosystem.",
   "owner": {
     "name": "paulohenriquevn",
@@ -12,7 +12,7 @@
       "name": "judge-codex",
       "description": "Autonomous + rigorous Codex-as-judge layer for the `plan` cycle ecosystem (DISCOVER → PLAN → IMPLEMENT → CODE-QUALITY → REVIEW). Breaks the Claude-only monoculture by adding GPT-Codex as an orthogonal LLM jury that re-validates each cycle artifact against its golden-rule contract.",
       "source": ".",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "author": {
         "name": "Paulo Henrique",
         "email": "paulohenrique.java@gmail.com"
