@@ -14,7 +14,8 @@
     "cross_validation_vs_blueprint",
     "claude_side_verdict_anchor",
     "model_used",
-    "elapsed_ms"
+    "elapsed_ms",
+    "fallback_used"
   ],
   "properties": {
     "verdict": {
@@ -207,6 +208,12 @@
         "null"
       ],
       "minimum": 0
+    },
+    "fallback_used": {
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   }
 }

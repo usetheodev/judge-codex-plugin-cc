@@ -172,6 +172,32 @@ function assemblePrompt({ agentSystem, goldenRule, artifact, stage, slug, claude
 // Override via env JUDGE_CODEX_EFFORT or per-invocation flag.
 const DEFAULT_EFFORT = process.env.JUDGE_CODEX_EFFORT || "xhigh";
 
+// Fallback model: when Codex is unavailable (credits exhausted, not logged in,
+// rate-limited), judge-codex falls back to `claude` CLI with a model DIFFERENT
+// from whatever produced the content under judgement. Default: Sonnet 4.6
+// (Claude family, distinct from Opus that typically authored the artifact).
+// Override via env JUDGE_CODEX_FALLBACK_MODEL.
+const FALLBACK_MODEL = process.env.JUDGE_CODEX_FALLBACK_MODEL || "sonnet";
+
+// Patterns in codex stderr that indicate exhaustion / rate-limit / quota /
+// account problems. When matched, the companion silently falls back to the
+// Claude CLI runner without surfacing a hard failure.
+const CODEX_EXHAUSTION_PATTERNS = [
+  /rate.?limit/i,
+  /quota/i,
+  /credit/i,
+  /usage.?limit/i,
+  /(not.?logged.?in|please.?login)/i,
+  /(api.?key.?invalid|invalid.?api.?key)/i,
+  /(unauthorized|401|403)/i,
+  /payment.?required/i,
+];
+
+function isExhaustionError(stderr, stdout) {
+  const text = `${stderr}\n${stdout}`;
+  return CODEX_EXHAUSTION_PATTERNS.some((re) => re.test(text));
+}
+
 function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, lastMessagePath, workdir }) {
   const args = ["exec", "--skip-git-repo-check", "--color", "never"];
   if (model) args.push("--model", model);
@@ -198,6 +224,99 @@ function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, l
     stdout: result.stdout || "",
     stderr: result.stderr || "",
   };
+}
+
+function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model = FALLBACK_MODEL }) {
+  // Build the same prompt the Codex path would have received, but call
+  // `claude` CLI in non-interactive mode with model + structured output.
+  // The fallback emits the result via stdout (no --output-last-message
+  // equivalent in claude CLI) — we write to lastMessagePath ourselves.
+  const args = [
+    "--print",
+    "--model", model,
+    "--output-format", "json",
+    "--max-turns", "1",
+    "--allowed-tools", "",
+    "--dangerously-skip-permissions",
+  ];
+  if (schemaPath) {
+    // claude expects the schema inline (not a path)
+    try {
+      const schema = fs.readFileSync(schemaPath, "utf8");
+      args.push("--json-schema", schema);
+    } catch (e) {
+      process.stderr.write(`[fallback] failed reading schema ${schemaPath}: ${e}\n`);
+    }
+  }
+  // Append the prompt as the last positional argument.
+  args.push(prompt);
+
+  const result = spawnSync("claude", args, {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+    cwd: workdir || process.cwd(),
+  });
+
+  if (result.status !== 0) {
+    return {
+      code: result.status,
+      stdout: result.stdout || "",
+      stderr: result.stderr || "",
+    };
+  }
+
+  // claude --output-format json wraps the model reply in a SDK envelope.
+  // Extract `result` field (the model's JSON-encoded reply string).
+  let envelope;
+  try {
+    envelope = JSON.parse(result.stdout);
+  } catch {
+    return {
+      code: 1,
+      stdout: result.stdout,
+      stderr: `[fallback] claude stdout was not parseable as SDK JSON envelope`,
+    };
+  }
+  const modelReply = envelope.result || "";
+
+  // Persist the modelReply to lastMessagePath so the calling judgeOne()
+  // can read it just like it does for Codex.
+  if (lastMessagePath) {
+    try {
+      fs.writeFileSync(lastMessagePath, modelReply, "utf8");
+    } catch (e) {
+      process.stderr.write(`[fallback] failed writing lastMessage: ${e}\n`);
+    }
+  }
+
+  return {
+    code: 0,
+    stdout: modelReply,
+    stderr: envelope.is_error ? `[fallback] claude reported is_error=true: ${envelope.subtype}` : "",
+  };
+}
+
+function runJudge(opts) {
+  // Tries Codex first. On detected exhaustion, falls back to Claude CLI
+  // with a DIFFERENT model than whatever produced the content under
+  // judgement. The honest answer if both fail: surface the failure.
+  const codexResult = runCodex(opts);
+  if (codexResult.code === 0) {
+    codexResult.usedFallback = false;
+    codexResult.model = opts.model || "codex-default";
+    return codexResult;
+  }
+  if (isExhaustionError(codexResult.stderr, codexResult.stdout)) {
+    process.stderr.write(`[judge-codex] Codex exhausted (rate/credit/auth). Falling back to claude --model ${FALLBACK_MODEL}.\n`);
+    const fallbackResult = runClaudeFallback(opts);
+    fallbackResult.usedFallback = true;
+    fallbackResult.model = `claude-fallback:${FALLBACK_MODEL}`;
+    return fallbackResult;
+  }
+  // Non-exhaustion failure (e.g., real error). Don't mask it.
+  codexResult.usedFallback = false;
+  codexResult.model = opts.model || "codex-default";
+  return codexResult;
 }
 
 function writeOutput(consumerRoot, stage, slug, payload) {
@@ -240,13 +359,14 @@ async function judgeOne({ stage, slug, model }) {
   fs.mkdirSync(path.dirname(lastMessagePath), { recursive: true });
 
   const t0 = Date.now();
-  const { code, stdout, stderr } = runCodex({
+  const judgeRun = runJudge({
     prompt,
     model,
     schemaPath,
     lastMessagePath,
     workdir: consumerRoot,
   });
+  const { code, stdout, stderr } = judgeRun;
   const elapsed = Date.now() - t0;
 
   if (code !== 0) {
@@ -269,7 +389,8 @@ async function judgeOne({ stage, slug, model }) {
     process.exit(1);
   }
 
-  parsed.model_used = model || "codex-default";
+  parsed.model_used = judgeRun.model || (model || "codex-default");
+  parsed.fallback_used = Boolean(judgeRun.usedFallback);
   parsed.elapsed_ms = elapsed;
   parsed.stage = stage;
   parsed.slug = slug;
