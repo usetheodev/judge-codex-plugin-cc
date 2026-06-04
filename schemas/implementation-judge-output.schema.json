@@ -4,13 +4,36 @@
   "title": "judge-codex implementation stage output",
   "type": "object",
   "additionalProperties": false,
-  "required": ["verdict", "score", "hard_caps_triggered", "soft_caps_triggered", "findings", "wiring_triad_table", "plan_vs_commits", "summary"],
+  "required": [
+    "verdict",
+    "score",
+    "hard_caps_triggered",
+    "soft_caps_triggered",
+    "findings",
+    "wiring_triad_table",
+    "plan_vs_commits",
+    "summary",
+    "claude_side_verdict_anchor",
+    "model_used",
+    "elapsed_ms"
+  ],
   "properties": {
     "verdict": {
       "type": "string",
-      "enum": ["SHIPPABLE", "SHIPPABLE_WITH_CAVEATS", "NEEDS_REVISION", "FAIL_SOFT", "FAIL_HARD", "INVALID"]
+      "enum": [
+        "SHIPPABLE",
+        "SHIPPABLE_WITH_CAVEATS",
+        "NEEDS_REVISION",
+        "FAIL_SOFT",
+        "FAIL_HARD",
+        "INVALID"
+      ]
     },
-    "score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
     "hard_caps_triggered": {
       "type": "array",
       "items": {
@@ -41,18 +64,76 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["severity", "stable_id", "title", "body", "file", "recommendation"],
+        "required": [
+          "severity",
+          "stable_id",
+          "title",
+          "body",
+          "file",
+          "line_start",
+          "line_end",
+          "commit_sha",
+          "recommendation",
+          "confidence"
+        ],
         "properties": {
-          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
-          "stable_id": { "type": "string", "minLength": 1 },
-          "title": { "type": "string", "minLength": 1 },
-          "body": { "type": "string", "minLength": 1 },
-          "file": { "type": "string" },
-          "line_start": { "type": "integer", "minimum": 1 },
-          "line_end": { "type": "integer", "minimum": 1 },
-          "commit_sha": { "type": "string" },
-          "recommendation": { "type": "string", "minLength": 1 },
-          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "stable_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "file": {
+            "type": "string"
+          },
+          "line_start": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "line_end": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "commit_sha": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recommendation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          }
         }
       }
     },
@@ -61,38 +142,133 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["symbol", "pillar_a", "pillar_b", "pillar_c"],
+        "required": [
+          "symbol",
+          "pillar_a",
+          "pillar_b",
+          "pillar_c",
+          "deferral_adr"
+        ],
         "properties": {
-          "symbol": { "type": "string", "minLength": 1 },
-          "pillar_a": { "type": "string", "enum": ["pass", "fail"] },
-          "pillar_b": { "type": "string", "enum": ["pass", "defer", "fail"] },
-          "pillar_c": { "type": "string", "enum": ["pass", "n/a", "defer", "fail"] },
-          "deferral_adr": { "type": "string" }
+          "symbol": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pillar_a": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          },
+          "pillar_b": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "defer",
+              "fail"
+            ]
+          },
+          "pillar_c": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "n/a",
+              "defer",
+              "fail"
+            ]
+          },
+          "deferral_adr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       }
     },
     "plan_vs_commits": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["plan_tasks_total", "tasks_with_commits", "orphan_commits"],
+      "required": [
+        "plan_tasks_total",
+        "tasks_with_commits",
+        "orphan_commits",
+        "drift_events_logged"
+      ],
       "properties": {
-        "plan_tasks_total": { "type": "integer", "minimum": 0 },
-        "tasks_with_commits": { "type": "integer", "minimum": 0 },
-        "orphan_commits": { "type": "array", "items": { "type": "string" } },
-        "drift_events_logged": { "type": "integer", "minimum": 0 }
+        "plan_tasks_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tasks_with_commits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "orphan_commits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drift_events_logged": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
       }
     },
-    "summary": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
     "claude_side_verdict_anchor": {
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
-        "verdict": { "type": "string" },
-        "code_quality_verdict": { "type": "string" },
-        "disagreement": { "type": "boolean" }
-      }
+        "verdict": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code_quality_verdict": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disagreement": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "verdict",
+        "code_quality_verdict",
+        "disagreement"
+      ]
     },
-    "model_used": { "type": "string", "default": "gpt-5-codex" },
-    "elapsed_ms": { "type": "integer", "minimum": 0 }
+    "model_used": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": "gpt-5-codex"
+    },
+    "elapsed_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    }
   }
 }

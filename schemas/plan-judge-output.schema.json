@@ -4,13 +4,35 @@
   "title": "judge-codex plan stage output",
   "type": "object",
   "additionalProperties": false,
-  "required": ["verdict", "score", "hard_caps_triggered", "soft_caps_triggered", "findings", "summary"],
+  "required": [
+    "verdict",
+    "score",
+    "hard_caps_triggered",
+    "soft_caps_triggered",
+    "findings",
+    "summary",
+    "cross_validation_vs_blueprint",
+    "claude_side_verdict_anchor",
+    "model_used",
+    "elapsed_ms"
+  ],
   "properties": {
     "verdict": {
       "type": "string",
-      "enum": ["SHIPPABLE", "SHIPPABLE_WITH_CAVEATS", "NEEDS_REVISION", "FAIL_SOFT", "FAIL_HARD", "INVALID"]
+      "enum": [
+        "SHIPPABLE",
+        "SHIPPABLE_WITH_CAVEATS",
+        "NEEDS_REVISION",
+        "FAIL_SOFT",
+        "FAIL_HARD",
+        "INVALID"
+      ]
     },
-    "score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
     "hard_caps_triggered": {
       "type": "array",
       "items": {
@@ -43,39 +65,148 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["severity", "stable_id", "title", "body", "plan_section", "recommendation"],
+        "required": [
+          "severity",
+          "stable_id",
+          "title",
+          "body",
+          "plan_section",
+          "recommendation",
+          "confidence"
+        ],
         "properties": {
-          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
-          "stable_id": { "type": "string", "minLength": 1 },
-          "title": { "type": "string", "minLength": 1 },
-          "body": { "type": "string", "minLength": 1 },
-          "plan_section": { "type": "string" },
-          "recommendation": { "type": "string", "minLength": 1 },
-          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "stable_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "plan_section": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          }
         }
       }
     },
-    "summary": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
     "cross_validation_vs_blueprint": {
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
-        "blueprint_exists": { "type": "boolean" },
-        "blueprint_adr_seeds_count": { "type": "integer", "minimum": 0 },
-        "plan_adrs_absorbing_seeds_count": { "type": "integer", "minimum": 0 },
-        "consistency_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
-      }
+        "blueprint_exists": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "blueprint_adr_seeds_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "plan_adrs_absorbing_seeds_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "consistency_ratio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "blueprint_exists",
+        "blueprint_adr_seeds_count",
+        "plan_adrs_absorbing_seeds_count",
+        "consistency_ratio"
+      ]
     },
     "claude_side_verdict_anchor": {
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
-        "verdict": { "type": "string" },
-        "score": { "type": "number" },
-        "disagreement": { "type": "boolean" }
-      }
+        "verdict": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "disagreement": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "verdict",
+        "score",
+        "disagreement"
+      ]
     },
-    "model_used": { "type": "string", "default": "gpt-5-codex" },
-    "elapsed_ms": { "type": "integer", "minimum": 0 }
+    "model_used": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": "gpt-5-codex"
+    },
+    "elapsed_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    }
   }
 }

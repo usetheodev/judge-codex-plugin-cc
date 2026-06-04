@@ -163,12 +163,18 @@ function assemblePrompt({ agentSystem, goldenRule, artifact, stage, slug, claude
   return segments.join("\n\n");
 }
 
-function runCodex({ prompt, model = "gpt-5-codex", effort = "medium" }) {
-  const result = spawnSync(
-    "codex",
-    ["exec", "--json", "--model", model, "--effort", effort, prompt],
-    { encoding: "utf8", maxBuffer: 50 * 1024 * 1024 },
-  );
+function runCodex({ prompt, model = null, schemaPath, lastMessagePath, workdir }) {
+  const args = ["exec", "--skip-git-repo-check", "--color", "never"];
+  if (model) args.push("--model", model);
+  if (schemaPath) args.push("--output-schema", schemaPath);
+  if (lastMessagePath) args.push("--output-last-message", lastMessagePath);
+  if (workdir) args.push("--cd", workdir);
+  args.push(prompt);
+
+  const result = spawnSync("codex", args, {
+    encoding: "utf8",
+    maxBuffer: 50 * 1024 * 1024,
+  });
   return {
     code: result.status,
     stdout: result.stdout || "",
@@ -185,7 +191,7 @@ function writeOutput(consumerRoot, stage, slug, payload) {
   return jsonPath;
 }
 
-async function judgeOne({ stage, slug, model, effort }) {
+async function judgeOne({ stage, slug, model }) {
   const consumerRoot = findConsumerRoot();
   const cfg = STAGE_DISCOVERY_PATHS[stage];
   if (!cfg) {
@@ -211,8 +217,18 @@ async function judgeOne({ stage, slug, model, effort }) {
     claudeAnchor: null, // resolution of Claude-side verdict deferred to a future iteration
   });
 
+  const schemaPath = path.join(PLUGIN_ROOT, "schemas", cfg.schema);
+  const lastMessagePath = path.join(consumerRoot, "knowledge-base", "judge-codex", `.last-message-${stage}-${slug}.txt`);
+  fs.mkdirSync(path.dirname(lastMessagePath), { recursive: true });
+
   const t0 = Date.now();
-  const { code, stdout, stderr } = runCodex({ prompt, model, effort });
+  const { code, stdout, stderr } = runCodex({
+    prompt,
+    model,
+    schemaPath,
+    lastMessagePath,
+    workdir: consumerRoot,
+  });
   const elapsed = Date.now() - t0;
 
   if (code !== 0) {
@@ -220,33 +236,36 @@ async function judgeOne({ stage, slug, model, effort }) {
     process.exit(code || 1);
   }
 
-  // Codex --json wraps the model's structured output; extract the JSON object.
+  // codex exec writes the final assistant message to --output-last-message.
+  // The schema-enforced JSON lives in that file. Read it and parse.
   let parsed;
   try {
-    parsed = JSON.parse(stdout);
-  } catch {
-    // Fallback: try to extract the first {...} object from stdout
-    const match = stdout.match(/\{[\s\S]*\}/);
-    if (!match) {
-      process.stderr.write(`codex stdout was not parseable JSON:\n${stdout.slice(0, 2000)}\n`);
-      process.exit(1);
-    }
-    parsed = JSON.parse(match[0]);
+    const lastMessageRaw = fs.readFileSync(lastMessagePath, "utf8").trim();
+    // Strip any code fences if Codex wrapped despite schema enforcement.
+    const cleaned = lastMessageRaw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    process.stderr.write(`failed to parse codex output as JSON:\n${e}\n`);
+    process.stderr.write(`raw last message file: ${lastMessagePath}\n`);
+    process.stderr.write(`codex stdout (last 2KB):\n${stdout.slice(-2000)}\n`);
+    process.exit(1);
   }
 
-  parsed.model_used = model;
+  parsed.model_used = model || "codex-default";
   parsed.elapsed_ms = elapsed;
   parsed.stage = stage;
   parsed.slug = slug;
   parsed.artifact_path = path.relative(consumerRoot, artifactPath);
 
   const jsonPath = writeOutput(consumerRoot, stage, slug, parsed);
+  // Cleanup the intermediate last-message file.
+  try { fs.unlinkSync(lastMessagePath); } catch {}
   process.stdout.write(`${JSON.stringify(parsed, null, 2)}\n`);
   process.stderr.write(`[judge-codex] saved: ${path.relative(process.cwd(), jsonPath)}\n`);
   return parsed;
 }
 
-async function runAuto({ slug, model, effort, stopOnDisagreement }) {
+async function runAuto({ slug, model, stopOnDisagreement }) {
   const stages = ["discover", "plan", "implementation", "final"];
   const consumerRoot = findConsumerRoot();
   const results = {};
@@ -259,7 +278,7 @@ async function runAuto({ slug, model, effort, stopOnDisagreement }) {
       continue;
     }
     try {
-      const r = await judgeOne({ stage, slug, model, effort });
+      const r = await judgeOne({ stage, slug, model });
       results[stage] = {
         verdict: r.verdict,
         score: r.score,
@@ -360,14 +379,15 @@ const args = parseArgs(argv.slice(1));
 
 if (cmd === "judge") {
   if (!args.stage || !args.slug) {
-    process.stderr.write("Usage: judge --stage <stage> --slug <slug> [--model M] [--effort E]\n");
+    process.stderr.write("Usage: judge --stage <stage> --slug <slug> [--model M]\n");
     process.exit(2);
   }
+  // Default model: omit -- let codex use the user's `~/.codex/config.toml` default.
+  // (gpt-5-codex requires API key; gpt-5.4 works on ChatGPT login.)
   await judgeOne({
     stage: args.stage,
     slug: args.slug,
-    model: args.model || "gpt-5-codex",
-    effort: args.effort || "medium",
+    model: args.model || null,
   });
 } else if (cmd === "auto") {
   if (!args.slug) {
@@ -376,8 +396,7 @@ if (cmd === "judge") {
   }
   await runAuto({
     slug: args.slug,
-    model: args.model || "gpt-5-codex",
-    effort: args.effort || "medium",
+    model: args.model || null,
     stopOnDisagreement: Boolean(args["stop-on-disagreement"]),
   });
 } else if (cmd === "status") {
