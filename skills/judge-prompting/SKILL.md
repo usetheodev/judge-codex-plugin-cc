@@ -60,8 +60,12 @@ You MUST reach your own independent verdict. Do not anchor on the Claude-side re
 
 This explicit anti-anchoring instruction is critical — without it, Codex tends to agree with the upstream verdict (sycophancy / mode-matching).
 
-## Token budget
+## Token budget — QUALITY OVER ECONOMY
 
-- Default: no limit beyond Codex CLI's defaults.
-- For artifacts > 50KB: the companion adds `--effort high` automatically.
-- For artifacts > 200KB: artifact truncated to first 100KB + last 50KB with a `<<<TRUNCATED N BYTES>>>` marker.
+judge-codex prioritizes judgement quality over token economy. This is a deliberate trade-off:
+
+- **Reasoning effort:** the companion calls `codex exec -c model_reasoning_effort="xhigh"` by default — top tier on the OpenAI side. Override via env `JUDGE_CODEX_EFFORT=high|medium|low|minimal|none` or per-invocation flag if cost is a concern, but the default DOES NOT compromise.
+- **Artifact reading:** FULL file is fed to Codex. No head+tail truncation. The whole plan, the whole implementation log, the whole consolidated review — all of it.
+- **Hard fence (defense in depth, not optimization):** `JUDGE_CODEX_MAX_ARTIFACT_BYTES` defaults to 16 MB. Any artifact exceeding it fails loud (raise `Error`) rather than silently truncating. Raise the env var only if intentional; never silently lose context.
+- **Buffer:** the spawned codex subprocess is granted `maxBuffer: 256 MB` for stdout — comfortably above any judge run produced in xhigh mode.
+- **Timeout:** subject to the caller's wallclock. xhigh runs take several minutes per stage; plan accordingly.

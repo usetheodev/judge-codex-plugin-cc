@@ -123,19 +123,22 @@ function locateGoldenRule(consumerRoot, ruleName) {
   return null;
 }
 
-function readUtf8(p, maxBytes = 200_000) {
+// Judge-codex prioritizes JUDGEMENT QUALITY over token economy.
+// Artifacts are read in FULL — no head+tail truncation — so the orthogonal
+// jury sees exactly what the consumer audited. Set JUDGE_CODEX_MAX_ARTIFACT_BYTES
+// only as a defensive fence against pathological inputs; default is 16 MB
+// which dwarfs any plausible plan/blueprint/implementation log.
+const ARTIFACT_HARD_FENCE_BYTES = Number(process.env.JUDGE_CODEX_MAX_ARTIFACT_BYTES) || 16 * 1024 * 1024;
+
+function readUtf8(p) {
   const stat = fs.statSync(p);
-  if (stat.size > maxBytes) {
-    const fd = fs.openSync(p, "r");
-    const head = Buffer.alloc(100_000);
-    const tail = Buffer.alloc(50_000);
-    fs.readSync(fd, head, 0, 100_000, 0);
-    fs.readSync(fd, tail, 0, 50_000, stat.size - 50_000);
-    fs.closeSync(fd);
-    return (
-      head.toString("utf8") +
-      `\n\n<<<TRUNCATED ${stat.size - 150_000} BYTES>>>\n\n` +
-      tail.toString("utf8")
+  if (stat.size > ARTIFACT_HARD_FENCE_BYTES) {
+    // We still refuse to silently feed a multi-MB file when the user did not
+    // explicitly raise the fence. Quality requires full context; safety
+    // requires a sane upper bound. The honest answer is to fail loud.
+    throw new Error(
+      `Artifact ${p} (${stat.size} bytes) exceeds JUDGE_CODEX_MAX_ARTIFACT_BYTES (${ARTIFACT_HARD_FENCE_BYTES}). ` +
+        `Raise the env var if intentional; do NOT silently truncate — judgement quality requires full context.`,
     );
   }
   return fs.readFileSync(p, "utf8");
@@ -163,9 +166,21 @@ function assemblePrompt({ agentSystem, goldenRule, artifact, stage, slug, claude
   return segments.join("\n\n");
 }
 
-function runCodex({ prompt, model = null, schemaPath, lastMessagePath, workdir }) {
+// Default effort: `xhigh` — judge-codex prioritizes JUDGEMENT QUALITY over latency.
+// Codex exec exposes reasoning effort via `-c model_reasoning_effort=<value>`
+// (valid values per codex --help: none | minimal | low | medium | high | xhigh).
+// Override via env JUDGE_CODEX_EFFORT or per-invocation flag.
+const DEFAULT_EFFORT = process.env.JUDGE_CODEX_EFFORT || "xhigh";
+
+function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, lastMessagePath, workdir }) {
   const args = ["exec", "--skip-git-repo-check", "--color", "never"];
   if (model) args.push("--model", model);
+  // Reasoning effort goes through the -c key=value override path because codex
+  // exec does NOT accept --effort directly (top-level codex does; codex exec
+  // routes through the config system).
+  if (effort) {
+    args.push("-c", `model_reasoning_effort="${effort}"`);
+  }
   if (schemaPath) args.push("--output-schema", schemaPath);
   if (lastMessagePath) args.push("--output-last-message", lastMessagePath);
   if (workdir) args.push("--cd", workdir);
@@ -173,7 +188,10 @@ function runCodex({ prompt, model = null, schemaPath, lastMessagePath, workdir }
 
   const result = spawnSync("codex", args, {
     encoding: "utf8",
-    maxBuffer: 50 * 1024 * 1024,
+    // 256 MB buffer — judge prompts + cycle artifacts + golden rules can run
+    // several hundred KB; xhigh reasoning generates verbose intermediate
+    // events. Stay well above any plausible single-judge size.
+    maxBuffer: 256 * 1024 * 1024,
   });
   return {
     code: result.status,
