@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/paulohenriquevn/judge-codex-plugin-cc/schemas/plan-judge-output.schema.json",
+  "title": "judge-codex plan stage output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "score", "hard_caps_triggered", "soft_caps_triggered", "findings", "summary"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["SHIPPABLE", "SHIPPABLE_WITH_CAVEATS", "NEEDS_REVISION", "FAIL_SOFT", "FAIL_HARD", "INVALID"]
+    },
+    "score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "hard_caps_triggered": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "coverage_lt_100",
+          "coverage_lt_100_semantic",
+          "fabricated_citation",
+          "adr_without_alternatives",
+          "bugfix_without_tdd"
+        ]
+      }
+    },
+    "soft_caps_triggered": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "soft_floor_goal_not_smart",
+          "soft_floor_risks_empty_or_generic",
+          "soft_floor_open_questions_buried",
+          "soft_floor_test_plan_incomplete",
+          "soft_floor_acceptance_criteria_vague",
+          "soft_floor_blueprint_seeds_ignored"
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "stable_id", "title", "body", "plan_section", "recommendation"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+          "stable_id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "body": { "type": "string", "minLength": 1 },
+          "plan_section": { "type": "string" },
+          "recommendation": { "type": "string", "minLength": 1 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "cross_validation_vs_blueprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blueprint_exists": { "type": "boolean" },
+        "blueprint_adr_seeds_count": { "type": "integer", "minimum": 0 },
+        "plan_adrs_absorbing_seeds_count": { "type": "integer", "minimum": 0 },
+        "consistency_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "claude_side_verdict_anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verdict": { "type": "string" },
+        "score": { "type": "number" },
+        "disagreement": { "type": "boolean" }
+      }
+    },
+    "model_used": { "type": "string", "default": "gpt-5-codex" },
+    "elapsed_ms": { "type": "integer", "minimum": 0 }
+  }
+}

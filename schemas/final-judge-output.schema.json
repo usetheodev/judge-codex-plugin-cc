@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/paulohenriquevn/judge-codex-plugin-cc/schemas/final-judge-output.schema.json",
+  "title": "judge-codex final stage output (review-of-review)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "agent_files_audited", "consistency_checks", "meta_defects_detected", "findings", "summary"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "READY_TO_MERGE",
+        "NEEDS_FIXES",
+        "NEEDS_DEEPER",
+        "META_DEFECT_FOUND",
+        "AGGREGATOR_BUG_SUSPECTED",
+        "FAIL_HARD",
+        "INVALID"
+      ]
+    },
+    "score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "agent_files_audited": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "findings_count_in_file", "findings_count_in_consolidated", "matches"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "findings_count_in_file": { "type": "integer", "minimum": 0 },
+          "findings_count_in_consolidated": { "type": "integer", "minimum": 0 },
+          "matches": { "type": "boolean" }
+        }
+      }
+    },
+    "consistency_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockers_propagated", "high_count_consistent", "verdict_consistent_with_findings"],
+      "properties": {
+        "blockers_propagated": { "type": "boolean" },
+        "high_count_consistent": { "type": "boolean" },
+        "verdict_consistent_with_findings": { "type": "boolean" },
+        "fabricated_locations_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "meta_defects_detected": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "silently_dropped_agent_file",
+          "verdict_inconsistent_with_findings",
+          "fabricated_finding_location",
+          "process_drift_unlogged",
+          "edge_case_coverage_methodology_flawed",
+          "high_finding_dismissal_without_adr"
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "stable_id", "title", "body", "recommendation"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+          "stable_id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "body": { "type": "string", "minLength": 1 },
+          "evidence_path": { "type": "string" },
+          "recommendation": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "claude_side_verdict_anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verdict": { "type": "string" },
+        "disagreement": { "type": "boolean" }
+      }
+    },
+    "model_used": { "type": "string", "default": "gpt-5-codex" },
+    "elapsed_ms": { "type": "integer", "minimum": 0 }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "description": "Optional Stop hook — runs /judge-codex:final automatically when the last assistant turn produced a /review consolidated report. Disabled by default; enable by adding 'STOP' to JUDGE_CODEX_HOOKS env var.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if [[ \"$JUDGE_CODEX_HOOKS\" == *STOP* ]]; then node \"${CLAUDE_PLUGIN_ROOT}/scripts/codex-companion-judge.mjs\" judge --stage final --slug \"${JUDGE_CODEX_LAST_SLUG:-unknown}\" >/dev/null 2>&1 || true; fi'",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
+  }
+}
