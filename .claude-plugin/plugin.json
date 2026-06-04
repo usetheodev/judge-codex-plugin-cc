@@ -1,13 +1,12 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "judge-codex",
   "version": "0.1.0",
-  "description": "Autonomous + rigorous Codex-as-judge layer for the `plan` cycle ecosystem (DISCOVER → PLAN → IMPLEMENT → CODE-QUALITY → REVIEW). Breaks the Claude-only monoculture by adding GPT-Codex as an orthogonal LLM jury that re-validates each cycle's artifact against the cycle's golden-rule contract. Output is structured JSON aligned with the canonical verdict vocabulary (SHIPPABLE / SHIPPABLE_WITH_CAVEATS / NEEDS_FIXES / FAIL_HARD / INVALID) — not the binary approve/needs-attention used by generic code review.",
+  "description": "Autonomous + rigorous Codex-as-judge layer for the plan cycle ecosystem (DISCOVER, PLAN, IMPLEMENT, CODE-QUALITY, REVIEW). Breaks the Claude-only monoculture by adding GPT-Codex as an orthogonal LLM jury that re-validates each cycle artifact against its golden-rule contract.",
   "author": {
     "name": "Paulo Henrique",
     "email": "paulohenrique.java@gmail.com"
   },
-  "repository": "https://github.com/paulohenriquevn/judge-codex-plugin-cc",
+  "repository": "https://github.com/usetheodev/judge-codex-plugin-cc",
   "license": "MIT",
   "keywords": [
     "cycle-plan",
@@ -20,9 +19,5 @@
     "code-quality",
     "review",
     "autonomous-agents"
-  ],
-  "requires": {
-    "claudeCode": ">=1.0.0"
-  },
-  "_comment_": "judge-codex is a sibling plugin to `plan` (https://github.com/paulohenriquevn/plan). It does NOT replace `plan`'s 5-7 Claude sub-agents; it adds Codex as an orthogonal LLM jury so substance findings are no longer monocultural. Inspired by openai/codex-plugin-cc (generic Codex CLI bridge) and paulohenriquevn/loop-code-review (Ralph-loop + Autoresearch keep/discard quality gates)."
+  ]
 }
