@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and this proj
 
 ## [Unreleased]
 
+### Changed
+
+- **Repository renamed from `judge-codex-plugin-cc` to `judge-codex`,** matching the plugin id it has always declared. The `-plugin-cc` suffix said where the plugin runs, not what it does. New location: `https://github.com/usetheodev/judge-codex`; install with `/plugin marketplace add usetheodev/judge-codex`. GitHub redirects the old URL, so existing clones keep working until their remote is updated.
+
 ## [0.1.0] - 2026-06-04
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/paulohenriquevn/judge-codex-plugin-cc/schemas/implementation-judge-output.schema.json",
+  "$id": "https://github.com/paulohenriquevn/judge-codex/schemas/implementation-judge-output.schema.json",
   "title": "judge-codex implementation stage output",
   "type": "object",
   "additionalProperties": false,

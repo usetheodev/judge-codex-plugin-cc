@@ -50,7 +50,7 @@ npm install -g @openai/codex
 codex login
 
 # 2. Install this plugin
-/plugin marketplace add paulohenriquevn/judge-codex-plugin-cc
+/plugin marketplace add paulohenriquevn/judge-codex
 /plugin install judge-codex@judge-codex
 /reload-plugins
 
